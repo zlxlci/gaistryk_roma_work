@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="styles.css">
+  <title>Формирование заявки</title>
+</head>
+<body>
+  <header class="header-class">
+    <h1>Конференции.РФ</h1>
+    <nav><ul>
+      <li><a href="products.html">Заявка</a></li>
+      <li><a href="reports.html">Мои заявки</a></li>
+      <li><a href="#" id="logout">Выход</a></li>
+    </ul></nav>
+  </header>
+
+  <main>
+    <section class="infosite"><h1>Составьте заявку на проведение конференции</h1></section>
+    <div class="wrapper-col">
+      <div class="form-card">
+        <h2>Новая заявка</h2>
+        <form id="appForm">
+          <label>Помещение</label>
+          <select name="room_id" id="roomSelect" required aria-describedby="roomHint"><option value="" selected disabled>Загрузка помещений…</option></select>
+          <div id="roomHint" class="field-hint">Выберите подходящее помещение из доступных.</div>
+          <label>Дата и время начала</label>
+          <input type="datetime-local" name="start_date" required>
+          <label>Способ оплаты</label>
+          <select name="payment_method" required aria-label="Способ оплаты">
+            <option value="очное">Очное посещение</option>
+            <option value="СБП">Перевод по СБП</option>
+          </select>
+          <button type="submit">Отправить</button>
+        </form>
+        <div id="msg" class="msg"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer-site"><div><span>&copy; 2026 Self Rights</span></div></footer>
+
+  <script>
+    async function loadRooms() {
+      const r = await fetch('/api/applications/rooms');
+      if (!r.ok) { location.href='index.html'; return; }
+      const rooms = await r.json();
+      const sel = document.getElementById('roomSelect');
+      sel.innerHTML = '<option value="" selected disabled>Выберите помещение</option>' + rooms.map(x =>
+        `<option value="${x.id}">${x.name} — ${x.type}</option>`).join('');
+    }
+    loadRooms();
+
+    document.getElementById('appForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const msg = document.getElementById('msg');
+      msg.className='msg';
+      const r = await fetch('/api/applications', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          room_id: f.room_id.value,
+          start_date: f.start_date.value.replace('T',' ') + ':00',
+          payment_method: f.payment_method.value
+        })
+      });
+      const data = await r.json();
+      if (!r.ok) { msg.className='msg error'; msg.textContent = data.error; return; }
+      msg.className='msg ok'; msg.textContent='Заявка отправлена!';
+      f.reset();
+    });
+
+    document.getElementById('logout').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/auth/logout', { method:'POST' });
+      location.href='index.html';
+    });
+  </script>
+</body>
+</html>
